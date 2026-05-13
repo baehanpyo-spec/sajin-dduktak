@@ -61,6 +61,7 @@ app.get('/result/:id', (req, res) => {
 
 app.post('/skill', async (req, res) => {
   console.log('API KEY:', process.env.REMOVE_BG_API_KEY ? '있음' : '없음');
+  console.log('req.body:', JSON.stringify(req.body, null, 2));
   const body = req.body;
 
   // 카카오 오픈빌더 이미지 URL 추출
