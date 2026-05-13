@@ -12,6 +12,10 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "express": "^5.2.1"
+    "@aws-sdk/client-s3": "^3.1045.0",
+    "axios": "^1.16.0",
+    "express": "^5.2.1",
+    "form-data": "^4.0.5",
+    "uuid": "^14.0.0"
   }
 }

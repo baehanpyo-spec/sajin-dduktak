@@ -1,28 +1,138 @@
 const express = require('express');
-const app = express();
+const axios = require('axios');
+const FormData = require('form-data');
+const { v4: uuidv4 } = require('uuid');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
+const app = express();
 app.use(express.json());
 
-app.get('/', (req, res) => {
-  res.send('사진뚝딱 서버 작동 중!');
+// R2 클라이언트 (환경변수가 설정된 경우에만 초기화)
+const r2 = process.env.R2_ACCOUNT_ID
+  ? new S3Client({
+      region: 'auto',
+      endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+      },
+    })
+  : null;
+
+// R2 미설정 시 임시 메모리 캐시 (10분 보관)
+const imageCache = new Map();
+
+async function storeImage(buffer) {
+  const filename = `${uuidv4()}.png`;
+
+  if (r2) {
+    await r2.send(
+      new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: filename,
+        Body: buffer,
+        ContentType: 'image/png',
+      })
+    );
+    return `${process.env.R2_PUBLIC_URL}/${filename}`;
+  }
+
+  // R2 미설정: 메모리 캐시 + 로컬 서빙
+  const id = uuidv4();
+  imageCache.set(id, buffer);
+  setTimeout(() => imageCache.delete(id), 10 * 60 * 1000);
+
+  const host = process.env.RAILWAY_PUBLIC_DOMAIN
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+    : `http://localhost:${process.env.PORT || 3000}`;
+
+  return `${host}/result/${id}`;
+}
+
+app.get('/', (req, res) => res.send('사진뚝딱 서버 작동 중!'));
+
+// 임시 이미지 제공 엔드포인트 (R2 미설정 시 사용)
+app.get('/result/:id', (req, res) => {
+  const buf = imageCache.get(req.params.id);
+  if (!buf) return res.status(404).send('이미지를 찾을 수 없습니다.');
+  res.set('Content-Type', 'image/png');
+  res.send(buf);
 });
 
-app.post('/skill', (req, res) => {
-  res.json({
-    version: '2.0',
-    template: {
-      outputs: [
-        {
-          simpleText: {
-            text: '안녕하세요! 사진을 보내주세요.',
-          },
+app.post('/skill', async (req, res) => {
+  const body = req.body;
+
+  // 카카오 오픈빌더 이미지 URL 추출
+  const imageUrl =
+    body?.userRequest?.params?.media?.url ||
+    body?.action?.params?.media?.url;
+
+  if (!imageUrl) {
+    return res.json({
+      version: '2.0',
+      template: {
+        outputs: [
+          { simpleText: { text: '사진을 보내주세요! 배경을 제거해드릴게요 🖼️' } },
+        ],
+      },
+    });
+  }
+
+  try {
+    // Remove.bg API 호출
+    const form = new FormData();
+    form.append('image_url', imageUrl);
+    form.append('size', 'auto');
+
+    const { data } = await axios.post(
+      'https://api.remove.bg/v1.0/removebg',
+      form,
+      {
+        headers: {
+          'X-Api-Key': process.env.REMOVE_BG_API_KEY,
+          ...form.getHeaders(),
         },
-      ],
-    },
-  });
+        responseType: 'arraybuffer',
+      }
+    );
+
+    const buffer = Buffer.from(data);
+    const resultUrl = await storeImage(buffer);
+
+    res.json({
+      version: '2.0',
+      template: {
+        outputs: [
+          {
+            simpleImage: {
+              imageUrl: resultUrl,
+              altText: '배경이 제거된 이미지',
+            },
+          },
+          {
+            simpleText: {
+              text: '✅ 배경 제거 완료!\n아래 이미지를 꾹 눌러서 저장하세요.',
+            },
+          },
+        ],
+      },
+    });
+  } catch (error) {
+    const errMsg = error.response?.data
+      ? Buffer.from(error.response.data).toString()
+      : error.message;
+    console.error('오류:', errMsg);
+
+    res.json({
+      version: '2.0',
+      template: {
+        outputs: [
+          { simpleText: { text: '❌ 배경 제거 중 오류가 발생했습니다. 다시 시도해주세요.' } },
+        ],
+      },
+    });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`서버 실행 중: http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`서버 실행 중: http://localhost:${PORT}`));
