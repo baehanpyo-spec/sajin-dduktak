@@ -78,6 +78,16 @@ app.post('/skill', async (req, res) => {
     });
   }
 
+  if (!process.env.REMOVE_BG_API_KEY) {
+    console.error('REMOVE_BG_API_KEY 환경변수가 설정되지 않았습니다.');
+    return res.json({
+      version: '2.0',
+      template: {
+        outputs: [{ simpleText: { text: '서버 설정 오류: API 키가 없습니다.' } }],
+      },
+    });
+  }
+
   try {
     // Remove.bg API 호출
     const form = new FormData();
@@ -89,8 +99,8 @@ app.post('/skill', async (req, res) => {
       form,
       {
         headers: {
-          'X-Api-Key': process.env.REMOVE_BG_API_KEY,
           ...form.getHeaders(),
+          'X-Api-Key': process.env.REMOVE_BG_API_KEY,
         },
         responseType: 'arraybuffer',
       }
