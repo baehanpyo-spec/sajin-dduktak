@@ -79,7 +79,7 @@ app.get('/', (req, res) => {
       <div class="company">
         <p><strong>운영사:</strong> 주식회사 디트릭스</p>
         <p><strong>사업자등록번호:</strong> 257-88-00735</p>
-        <p><strong>대표자:</strong> 오운준</p>
+        <p><strong>대표자:</strong> 오문준</p>
         <p><strong>소재지:</strong> 경기도 성남시 분당구 판교역로192번길 16, 701호</p>
       </div>
     </body>
