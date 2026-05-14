@@ -145,6 +145,42 @@ app.post('/skill', async (req, res) => {
     });
   }
 });
-
+app.get('/', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+      <meta charset="UTF-8">
+      <title>사진뚝딱 - AI 배경 제거 서비스</title>
+      <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        .company { color: #888; font-size: 14px; margin-top: 60px; border-top: 1px solid #eee; padding-top: 20px; }
+      </style>
+    </head>
+    <body>
+      <h1>📸 사진뚝딱</h1>
+      <p>카카오톡 채널 <strong>@사진뚝딱</strong>에서 이용하실 수 있는 AI 배경 자동 제거 서비스입니다.</p>
+      <h2>서비스 소개</h2>
+      <ul>
+        <li>카카오톡 채널에 사진을 보내면 배경이 자동으로 제거됩니다</li>
+        <li>별도 앱 설치 없이 카카오톡에서 바로 이용 가능</li>
+        <li>AI 기반 고품질 배경 제거 기술 적용</li>
+      </ul>
+      <h2>이용 방법</h2>
+      <ol>
+        <li>카카오톡에서 <strong>사진뚝딱</strong> 채널 추가</li>
+        <li>배경을 제거할 사진 전송</li>
+        <li>배경이 제거된 사진 즉시 수령</li>
+      </ol>
+      <div class="company">
+        <p><strong>운영사:</strong> 주식회사 디트릭스</p>
+        <p><strong>사업자등록번호:</strong> 257-88-00735</p>
+        <p><strong>대표자:</strong> 오운준</p>
+        <p><strong>소재지:</strong> 경기도 성남시 분당구 판교역로192번길 16, 701호</p>
+      </div>
+    </body>
+    </html>
+  `);
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`서버 실행 중: http://localhost:${PORT}`));
